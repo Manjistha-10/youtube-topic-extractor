@@ -8,7 +8,8 @@ export const config = {
 
   // For YouTube subtitles
   DOWNLOAD_DIR: path.join(process.cwd(), 'downloads'),
-  COOKIES_PATH: path.join(process.cwd(), 'cookies.txt'),
+  //COOKIES_PATH: path.join(process.cwd(), 'cookies.txt'),
+  COOKIES_PATH: path.join(__dirname, 'cookies.txt'),
   PROXY: process.env.PROXY || '',
 
   // Shared
