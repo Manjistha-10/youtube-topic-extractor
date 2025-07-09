@@ -578,14 +578,12 @@
 // }
 
 
-
-
 // Developed by Manjistha Bidkar
+const execa = require('execa');
 import * as fs from 'fs';
 import * as path from 'path';
 import { config } from '../config';
 import { getRandomUserAgent } from './userAgents';
-import { ytDlp } from 'yt-dlp-exec';
 
 export interface SubtitleDownloadResult {
   filePath: string;
@@ -594,20 +592,18 @@ export interface SubtitleDownloadResult {
 
 export async function downloadSubtitles(
   videoId: string,
-  outputDir: string,
+  outputDir: string
 ): Promise<SubtitleDownloadResult> {
   const baseUrl = `https://www.youtube.com/watch?v=${videoId}`;
   const output = path.join(outputDir, `${videoId}.%(ext)s`);
   const cookiesFile = config.COOKIES_PATH;
 
-  // Ensure output directory exists
   if (!fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir, { recursive: true });
   }
 
-  const buildCommonArgs = () => {
+  const buildCommonArgs = (): string[] => {
     const userAgent = getRandomUserAgent();
-
     const args = [
       '--cookies', cookiesFile,
       '--user-agent', userAgent,
@@ -618,26 +614,22 @@ export async function downloadSubtitles(
       '-o', output,
       baseUrl,
     ];
-
     if (config.PROXY) {
       args.unshift('--proxy', config.PROXY);
     }
-
     return args;
   };
 
   const tryDownload = async (lang: string, maxRetries = 3): Promise<string | null> => {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        await ytDlp(['--sub-lang', lang, ...buildCommonArgs()], {
+        await execa('yt-dlp', ['--sub-lang', lang, ...buildCommonArgs()], {
           shell: true,
         });
-
         const match = lang === 'en' ? '.en.vtt' : '.vtt';
         const subtitleFile = fs
           .readdirSync(outputDir)
           .find(f => f.startsWith(videoId) && f.endsWith(match));
-
         if (subtitleFile) {
           return subtitleFile;
         }
@@ -652,24 +644,18 @@ export async function downloadSubtitles(
     return null;
   };
 
-  // 1. Try English first
+  // 1. Try English
   const enSubtitle = await tryDownload('en');
   if (enSubtitle) {
-    return {
-      filePath: path.join(outputDir, enSubtitle),
-      langCode: 'en',
-    };
+    return { filePath: path.join(outputDir, enSubtitle), langCode: 'en' };
   }
 
-  // 2. Fallback to best available
+  // 2. Fallback to best
   const fallbackSubtitle = await tryDownload('best');
   if (fallbackSubtitle) {
     const langMatch = fallbackSubtitle.match(/\.(\w+)\.vtt$/);
     const detectedLang = langMatch?.[1] ?? 'unknown';
-    return {
-      filePath: path.join(outputDir, fallbackSubtitle),
-      langCode: detectedLang,
-    };
+    return { filePath: path.join(outputDir, fallbackSubtitle), langCode: detectedLang };
   }
 
   throw new Error(`No subtitles found for video: ${videoId}`);
