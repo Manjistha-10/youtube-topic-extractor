@@ -577,9 +577,7 @@
 //   throw new Error(`No subtitles found for video: ${videoId}`);
 // }
 
-
-// Developed by Manjistha Bidkar
-const execa = require('execa');
+import { execa } from 'execa';
 import * as fs from 'fs';
 import * as path from 'path';
 import { config } from '../config';
@@ -623,9 +621,7 @@ export async function downloadSubtitles(
   const tryDownload = async (lang: string, maxRetries = 3): Promise<string | null> => {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        await execa('yt-dlp', ['--sub-lang', lang, ...buildCommonArgs()], {
-          shell: true,
-        });
+        await execa('yt-dlp', ['--sub-lang', lang, ...buildCommonArgs()]);
         const match = lang === 'en' ? '.en.vtt' : '.vtt';
         const subtitleFile = fs
           .readdirSync(outputDir)
@@ -644,13 +640,11 @@ export async function downloadSubtitles(
     return null;
   };
 
-  // 1. Try English
   const enSubtitle = await tryDownload('en');
   if (enSubtitle) {
     return { filePath: path.join(outputDir, enSubtitle), langCode: 'en' };
   }
 
-  // 2. Fallback to best
   const fallbackSubtitle = await tryDownload('best');
   if (fallbackSubtitle) {
     const langMatch = fallbackSubtitle.match(/\.(\w+)\.vtt$/);
