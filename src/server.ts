@@ -73,11 +73,15 @@ import { parseVttFile } from './utils/parser';
 import { translateToEnglish } from './utils/translate';
 import { loadConceptsFromExcel, identifyConcepts } from './utils/matchTopics';
 import { config } from './config';
-import cookieUploadRoute from './routes/cookieUpload'; // ✅ Dynamic cookie upload
+import cookieUploadRoute from './routes/cookieUpload';
 
 const app = express();
+
 app.use(express.json());
-app.use(cookieUploadRoute); // ✅ Mount cookie upload route
+app.use(express.urlencoded({ extended: true }));
+
+// ✅ Register cookie upload route
+app.use(cookieUploadRoute);
 
 app.get('/', async (req, res) => {
   const videoUrl = req.query.url as string;
