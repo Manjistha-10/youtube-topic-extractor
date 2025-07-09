@@ -1,22 +1,22 @@
-// src/server.ts
-import express from 'express';
-import { downloadSubtitles } from './utils/downloader';
-import { parseVttFile } from './utils/parser';
-import { translateToEnglish } from './utils/translate';
-import { loadConceptsFromExcel, identifyConcepts } from './utils/matchTopics';
-import { config } from './config';
-import fs from 'fs-extra';
+// Developed by Manjistha Bidkar
+
+const express = require('express');
+const path = require('path');
+const fs = require('fs-extra');
+const { downloadSubtitles } = require('./utils/downloader');
+const { parseVttFile } = require('./utils/parser');
+const { translateToEnglish } = require('./utils/translate');
+const { loadConceptsFromExcel, identifyConcepts } = require('./utils/matchTopics');
+const { config } = require('./config');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(express.json());
-
-app.post('/analyze', async (req, res) => {
-  const { videoUrl } = req.body;
+app.get('/', async (req: any, res: any) => {
+  const videoUrl = req.query.url;
 
   if (!videoUrl) {
-    return res.status(400).json({ error: 'Missing videoUrl in request body' });
+    return res.status(400).send('❌ Please provide a YouTube video URL as a query param `?url=`');
   }
 
   try {
@@ -25,26 +25,33 @@ app.post('/analyze', async (req, res) => {
 
     await fs.ensureDir(config.DOWNLOAD_DIR);
 
+    console.log('📥 Downloading subtitles...');
     const { filePath, langCode } = await downloadSubtitles(videoId, config.DOWNLOAD_DIR);
+    console.log(`✅ Subtitles downloaded (${langCode}) → ${filePath}`);
+
+    console.log('📃 Parsing subtitle file...');
     const transcript = await parseVttFile(filePath);
+
+    console.log('🌐 Translating (if needed)...');
     const translated = await translateToEnglish(transcript);
+
+    console.log('📚 Loading concepts...');
     const concepts = loadConceptsFromExcel(config.EXCEL_PATH);
+
+    console.log('🔍 Matching topics...');
     const matched = identifyConcepts(translated, concepts);
 
-    return res.json({
-      videoId,
-      langCode,
-      matchedTopics: matched,
+    res.json({
+      message: '🎯 Matched Topics',
+      matchedTopics: matched
     });
+
   } catch (err: any) {
-    return res.status(500).json({ error: err.message || 'Unknown error' });
+    console.error('❌ Error:', err);
+    res.status(500).json({ error: err.message });
   }
 });
 
-app.get('/', (_req, res) => {
-  res.send('✅ YouTube Topic Extractor is live');
-});
-
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🚀 Server is running on http://localhost:${PORT}`);
 });
