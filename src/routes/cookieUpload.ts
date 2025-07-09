@@ -1,0 +1,21 @@
+import express, { Request } from 'express';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs-extra';
+import { config } from '../config';
+
+const router = express.Router();
+const upload = multer({ dest: 'uploads/' });
+
+router.post('/upload-cookies', upload.single('cookie'), async (req: Request & { file?: Express.Multer.File }, res) => {
+  if (!req.file) {
+    return res.status(400).send('No file uploaded.');
+  }
+
+  const targetPath = path.resolve(config.COOKIES_PATH);
+  await fs.move(req.file.path, targetPath, { overwrite: true });
+  console.log('✅ Cookies updated →', targetPath);
+  res.send('Cookies file updated successfully.');
+});
+
+export default router;
