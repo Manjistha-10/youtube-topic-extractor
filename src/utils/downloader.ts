@@ -618,27 +618,30 @@ export async function downloadSubtitles(
     return args;
   };
 
-  const tryDownload = async (lang: string, maxRetries = 3): Promise<string | null> => {
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        await execa('yt-dlp', ['--sub-lang', lang, ...buildCommonArgs()]);
-        const match = lang === 'en' ? '.en.vtt' : '.vtt';
-        const subtitleFile = fs
-          .readdirSync(outputDir)
-          .find(f => f.startsWith(videoId) && f.endsWith(match));
-        if (subtitleFile) {
-          return subtitleFile;
-        }
-      } catch (err: any) {
-        if (attempt === maxRetries) {
-          throw new Error(`Failed to download subtitles after ${maxRetries} attempts: ${err.message}`);
-        }
-        console.warn(`[Retry ${attempt}] Failed to download ${lang} subtitles for ${videoId}. Retrying...`);
-        await new Promise(res => setTimeout(res, 2000));
+ const tryDownload = async (lang: string, maxRetries = 3): Promise<string | null> => {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      await execa('./bin/yt-dlp', ['--sub-lang', lang, ...buildCommonArgs()]);
+
+      const match = lang === 'en' ? '.en.vtt' : '.vtt';
+      const subtitleFile = fs
+        .readdirSync(outputDir)
+        .find(f => f.startsWith(videoId) && f.endsWith(match));
+
+      if (subtitleFile) {
+        return subtitleFile;
       }
+    } catch (err: any) {
+      if (attempt === maxRetries) {
+        throw new Error(`Failed to download subtitles after ${maxRetries} attempts: ${err.message}`);
+      }
+      console.warn(`[Retry ${attempt}] Failed to download ${lang} subtitles for ${videoId}. Retrying...`);
+      await new Promise(res => setTimeout(res, 2000));
     }
-    return null;
-  };
+  }
+  return null;
+};
+
 
   const enSubtitle = await tryDownload('en');
   if (enSubtitle) {
